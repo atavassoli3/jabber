@@ -9,10 +9,12 @@
 
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
+#lets u generate random AES symmetric key
+import os
 
 #this class implements the rsa cipher
 
-class myrsaV2(object):
+class myrsaV2class(object):
     """docstring for ."""
 
     # default constructor
@@ -31,6 +33,16 @@ class myrsaV2(object):
     """
     def setKey(self, key):
         self.key = key
+    
+    """
+        generates the key to use
+        @param genKey - the key to generate
+        @return - True if the key is valid and False otherwise
+    """
+    def generateKey(self):
+        genKey = os.urandom(16)
+        self.key = genKey
+        return self.key
 
     """
         Sets the privKey to use
