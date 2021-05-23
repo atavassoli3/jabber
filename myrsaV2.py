@@ -20,7 +20,7 @@ class myrsaV2(object):
         self.key = None   #the symmetric key
         self.pubKey = None
         self.privKey = None
-        #self.keypair = (pubKey, privKey)
+        self.keypair = (self.pubKey, self.privKey)
         # The maximum key size
         self.KEY_SIZE = 512
 
@@ -102,6 +102,8 @@ class myrsaV2(object):
         with open ("public.pem", "rb") as pub_file:
         	contents = pub_file.read()
         	self.pubKey = RSA.importKey(contents)
+            
+        self.keypair = (self.pubKey, self.privKey)
         pass#loadKeyPair #######################################################
     #loadKeyPair ###############################################################
 
