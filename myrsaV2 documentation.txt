@@ -37,10 +37,9 @@ def setPrivKey(self, privKey): sets the self.privKey equal to privKey
 def setPubKey(self, pubKey): sets the self.pubKey equal to pubKey
 
 def storeKeyPair(self):		generates a public/private key pair
-				saves the keys to the .pem files
-				saves the keys to files
+				prepares for file i/o
 
-def loadKeyPair(self):		loads the private and public keys from the files created by storeKeyPair
+def loadKeyPair(self):		creates .pem files for each client's public and private key
 				uses RSA to import the keys
 				sets the self.pubKey equal to pubKey and sets the self.privKey equal to privKey
 				can be made to return the (self.pubKey, self.privKey) (this is commented out)
