@@ -119,8 +119,8 @@ class myrsaV2(object):
 
         ciphertext = ''
 
-        # Initielize the cipher with the key and encrypt
-        cipher = PKCS1_v1_5.new(self.pubKey)
+        # Initielize the cipher with the symmetric key and encrypt
+        cipher = PKCS1_v1_5.new(self.key)
         ciphertext = cipher.encrypt(plaintext.encode())
         print("Ciphertext: ", ciphertext)
 
@@ -169,8 +169,8 @@ class myrsaV2(object):
         plaintext = ''
 
         #call the rsa functions for decryption
-        # Decrypt using the private key
-        cipher = PKCS1_v1_5.new(self.privKey)
+        # Decrypt using the symmetric key
+        cipher = PKCS1_v1_5.new(self.key)
         plaintext = cipher.decrypt(ciphertext, 1000)
         print("Decrypted: ", plaintext)
 
