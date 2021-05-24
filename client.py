@@ -1,45 +1,84 @@
-# Python program to implement client side of chat room. 
-import socket 
-import select 
-import sys 
-  
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM) 
+from socket import AF_INET, socket, SOCK_STREAM
+from threading import Thread
+from myrsaV2 import myRSA
 
-# Gets the hostname of the computer
-hostname = socket.gethostname()
+#generate a new instance of the myrsaV2class class
+rsa = myRSA()
+#generate a public/private key pair and then store them
+rsa.storeKeyPair()
+# Now let's load those keys
+#this gives us our public and private key
+rsa.loadKeyPair()
 
-# Gets the IP address from the hostname
-IP_address = socket.gethostbyname(hostname)
-  
-# Statically set to work on port 8000 
-Port = 8000
-print(hostname, IP_address, Port)
+def receive():
+    """Handles receiving of messages."""
+    while True:
+        try:
+            msg = client_socket.recv(BUFSIZ).decode("utf8")
+            """
+            #determine whether the message is a key or an actual message
+            if msg != None:#TODO add the condition that checks for it being a key
+                #it is a symmetric key
+                #decrypt the key
+                decodedKey = rsa.decKey(msg)
+                #save the key to the myrsaV2class instance
+                rsa.setKey(decodedKey)
+                pass
+            else:
+                #it is a normal message
+                #decrypt the message
+                decodedText = rsa.decrypt(msg)
+                msg = decodedText
+                pass
+            """
+            print(msg)
+            #return msg
+        except OSError:  # Possibly client has left the chat.
+            break
 
-server.connect((IP_address, Port)) 
+def send(msg):  # event is passed by binders.
+    """Handles sending of messages."""
+    #encrypt the message
+    #ciphertext = rsa.encrypt(msg)
+    if msg == "{quit}":
+        client_socket.send(bytes(msg, "utf8"))
+        client_socket.close()
+    else:
+        client_socket.send(bytes(msg, "utf8"))
 
-while True: 
-  
-    # maintains a list of possible input streams 
-    sockets_list = [socket.socket(), server] 
+def on_closing(event=None):
+    """This function is to be called when the window is closed."""
+    send("{quit}")
 
-    """ There are two possible input situations. Either the 
-    user wants to give manual input to send to other people, 
-    or the server is sending a message to be printed on the 
-    screen. Select returns from sockets_list, the stream that 
-    is reader for input. So for example, if the server wants 
-    to send a message, then the if condition will hold true 
-    below.If the user wants to send a message, the else 
-    condition will evaluate as true"""
-    read_sockets,write_socket, error_socket = select.select(sockets_list,[],[]) 
-  
-    for socks in read_sockets: 
-        if socks == server: 
-            message = socks.recv(2048) 
-            print(message.decode()) 
-        else: 
-            message = sys.stdin.readline() 
-            server.send(message) 
-            sys.stdout.write("<{}}>") 
-            sys.stdout.write(message) 
-            sys.stdout.flush()
-server.close() 
+# Using Localhost as default IP and port 8000
+HOST = "127.0.0.1"
+PORT = "8000"
+if not PORT:
+    PORT = 33000
+else:
+    PORT = int(PORT)
+
+BUFSIZ = 1024
+ADDR = (HOST, PORT)
+
+client_socket = socket(AF_INET, SOCK_STREAM)
+client_socket.connect(ADDR)
+
+receive_thread = Thread(target=receive)
+receive_thread.start()
+
+# Send credentials to server for verification
+username = input("Enter username: ")
+password = input("Enter password: ")
+
+enable_dsa = ''
+# Send RSA or DSA choice of encryption to server
+while(not("yes" in enable_dsa or "no" in enable_dsa)):
+    enable_dsa = input("Enable DSA (yes or no): ")
+
+send("{},{}".format(username,password))
+send("{}".format(enable_dsa.lower()))
+#send("public key")
+
+while True:
+    send(input())
