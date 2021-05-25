@@ -16,12 +16,13 @@ from Crypto.Hash import SHA256
 """
 
 
-def genDSA_keys(client):
+def DSA_keyGen(client):
     # Create a new DSA key
     key = DSA.generate(2048)
     f = open(client+"_DSA_public_key.pem", "wb")
     f.write(key.publickey().exportKey())
     f.close()
+    return key
 
 
 """
@@ -32,7 +33,7 @@ def genDSA_keys(client):
 """
 
 
-def DSA_sign(key, message):
+def DSA_sign(message, key):
     # Sign a message
     hash_obj = SHA256.new(message)
     signer = DSS.new(key, 'fips-186-3')
