@@ -55,10 +55,9 @@ def DSA_sign(message, key):
 def DSA_verifier(message, signature, client):
     # Load the public key
     f = open(client+"_DSA_public_key.pem", "rb")
-    hash_obj = SHA256.new(message)
+    hash_obj = SHA256.new(message.encode())
     pub_key = DSA.import_key(f.read())
     verifier = DSS.new(pub_key, 'fips-186-3')
-
     # Verify the authenticity of the message
     try:
         verifier.verify(hash_obj, signature)

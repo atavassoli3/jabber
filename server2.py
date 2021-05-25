@@ -120,7 +120,7 @@ def handle_client(client):  # Takes client socket as argument.
 
         if clientObj.dsa == True:
 
-            dsa.DSA_verifier(msg, signature, client)
+            dsa.DSA_verifier(msg, signature, username)
 
         print(msg)
 

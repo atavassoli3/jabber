@@ -100,4 +100,5 @@ while True:
     else:
         signature = mysignature.signPlaintext(message, rsa.key)
         pass
+    print("{},{}".format(message, signature))
     send("{},{}".format(message, signature))
