@@ -19,8 +19,8 @@ from Crypto.Hash import SHA256
 def genDSA_keys(client):
     # Create a new DSA key
     key = DSA.generate(2048)
-    f = open(client+"DSA_public_key.pem", "wb")
-    f.write(key.publickey().export_key())
+    f = open(client+"_DSA_public_key.pem", "wb")
+    f.write(key.publickey().exportKey())
     f.close()
 
 
@@ -34,7 +34,6 @@ def genDSA_keys(client):
 
 def DSA_sign(key, message):
     # Sign a message
-    message = b"Hello"
     hash_obj = SHA256.new(message)
     signer = DSS.new(key, 'fips-186-3')
     signature = signer.sign(hash_obj)
@@ -52,9 +51,9 @@ def DSA_sign(key, message):
 """
 
 
-def DSA_verifier(pub_key, message, signature, client):
+def DSA_verifier(message, signature, client):
     # Load the public key
-    f = open(client+"DSA_public_key.pem", "rb")
+    f = open(client+"_DSA_public_key.pem", "rb")
     hash_obj = SHA256.new(message)
     pub_key = DSA.import_key(f.read())
     verifier = DSS.new(pub_key, 'fips-186-3')
