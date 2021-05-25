@@ -6,9 +6,10 @@ from threading import Thread
 import os
 
 #added may 22 354pm
-#from myrsaV2 import myRSA
+from myrsaV2 import myRSA
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
+from Crypto.Cipher import PKCS1_OAEP
 #from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
 #from Crypto.Hash import SHA256
 import binascii
@@ -19,6 +20,13 @@ help_prompt = "\nClient Commands:\n" + \
 "\n{who} - The server will send back the client if \nthey exist and whether they are online\n" + \
 "\n{invite} [parameter] - parameter can be a list of \nusernames separated by a space. The server will \nsend symmetric keys to all of the following users \nwho are online as well as notify who was offline.\n" + \
 "\n{quit} - closes the connection with the server. \nThe server will then broadcast that the user \nhas went offline to all users in the chat \nwith the same symmetric key.\n"
+
+clients = []
+addresses = {}
+inviteList = []
+rsa = myRSA('server')
+symmKey = rsa.generateKey() # rsa.key is then set
+print(symmKey)
 
 class Client:
 	def __init__(self, sock, username, password):
@@ -67,7 +75,6 @@ def accept_incoming_connections():
 
 def handle_client(client):  # Takes client socket as argument.
 	"""Handles a single client connection."""
-
 	# First interaction with client should be login
 	username, password = client.recv(BUFSIZ).decode("utf8").split(',')
 
@@ -94,6 +101,12 @@ def handle_client(client):  # Takes client socket as argument.
 	
 	clients.append(clientObj)	
 
+	# Create a symmetric key 
+	cipher = PKCS1_v1_5.new(clientObj.pubKey)
+	cipherKey = cipher.encrypt(rsa.key)
+	print(cipherKey)
+	client.send(cipherKey)
+
 	# Welcome the user
 	welcome = 'Welcome to Jabber %s! Type {help} to learn about the commands.\n' % username
 	client.send(bytes(welcome, "utf8"))
@@ -104,19 +117,21 @@ def handle_client(client):  # Takes client socket as argument.
 	
 	# Handles all the messages from the client after logging in / choosing rsa or dsa
 	while True:
+		global inviteList
 		msg = client.recv(BUFSIZ)
 		#decrypt the message
-		#plaintext = client.serverRSA.decrypt(msg)
-		#msg = plaintext
+		msg = rsa.decrypt(msg)
+
 		print(msg)
 		if(bytes("{who}", "utf8") in msg):
 			client.send(bytes(getClientsOnline(clients), "utf8"))
 
 		elif(bytes("{invite}", "utf8") in msg):
-			print("invite function requested")
 			inviteList = msg.decode().split(" ")
-			inviteList.pop(0) # Removes {invite} from the inviteList
-			broadcastToSelectClients(bytes("{} has sent you an invite!".format(username),"utf8"), inviteList, clients)
+			inviteList[0] = username # Removes {invite} from the inviteList
+			strInviteList = ','.join(inviteList)
+			msg = "Now talking in chatroom with: {}".format(strInviteList)
+			broadcastToSelectClients(bytes(msg,"utf8"), inviteList, clients)
 
 		elif(bytes("{help}", "utf8") in msg):
 			client.send(bytes(help_prompt, "utf8"))
@@ -131,7 +146,10 @@ def handle_client(client):  # Takes client socket as argument.
 					clients.remove(c)
 			broadcast(bytes("%s has left the chat." % username, "utf8"))
 		else:
-			broadcast(msg, username+": ")
+			if(username in inviteList):
+				broadcastToSelectClients(bytes(username+": " + msg.decode("utf8"), "utf8"), inviteList, clients)
+			else:
+				broadcast(msg, username+": ")
 
 def broadcastToSelectClients(msg, inviteList, clients):
 	for invite in inviteList:
@@ -162,9 +180,6 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
 	for client in clients:
 		client.sock.send(bytes(prefix, "utf8")+msg)
 
-
-clients = []
-addresses = {}
 
 HOST = "127.0.0.1"
 PORT = 8000

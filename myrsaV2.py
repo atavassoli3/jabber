@@ -11,6 +11,9 @@ from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
 import os
 
+#block by block decryption and encryption
+BLOCK_SIZE = 8
+
 #this class implements the rsa cipher
 
 class myRSA(object):
@@ -19,9 +22,9 @@ class myRSA(object):
     # default constructor
     def __init__(self, user):
         self.userName = user
-        self.key = None   #the symmetric key
-        self.pubKey = None
-        self.privKey = None
+        self.key = ''   #the symmetric key
+        self.pubKey = ''
+        self.privKey = ''
         self.keypair = (self.pubKey, self.privKey)
         # The maximum key size
         self.KEY_SIZE = 512
@@ -35,7 +38,7 @@ class myRSA(object):
         self.key = key
 
     """
-        generates the key to use
+        generates the symmetric key to use
         @param genKey - the key to generate
         @return - True if the key is valid and False otherwise
     """
@@ -76,11 +79,12 @@ class myRSA(object):
         # The private key bytes to print
         privKeyBytes = private_key.exportKey(format='PEM')
 
+
         # The public key bytes to print
-        pubKeyBytes = public_key.exportKey(format='PEM')        
-        
-        #self.pubKeyBytes = pubKeyBytes
-        #self.priKeyBytes = privKeyBytes
+        pubKeyBytes = public_key.exportKey(format='PEM')
+
+        print("privKeyBytes = ", privKeyBytes)
+        print("pubKeyBytes = ", pubKeyBytes)
 
         # Save the private key
         with open (self.userName+"-pr.pem", "wb") as prv_file:
@@ -89,6 +93,10 @@ class myRSA(object):
         # Save the public key
         with open (self.userName+"-pu.pem", "wb") as pub_file:
             pub_file.write(pubKeyBytes)
+        pass#storeKeyPair ######################################################
+    #storeKeyPair ##############################################################
+
+
 
     """
         loads the keypair to use
@@ -113,11 +121,14 @@ class myRSA(object):
 
         self.keypair = (self.pubKey, self.privKey)
         #return (self.pubKey, self.privKey)
+        pass#loadKeyPair #######################################################
+    #loadKeyPair ###############################################################
+
 
 
 
     """
-        Encrypts a plaintext string
+        Encrypts a plaintext string block by block
         @param plaintext - the plaintext string
         @return - the encrypted ciphertext string
     """
@@ -128,14 +139,43 @@ class myRSA(object):
         ciphertext = ''
 
         # Initielize the cipher with the key and encrypt
-        cipher = PKCS1_v1_5.new(self.pubKey)
+        cipher = PKCS1_v1_5.new(self.key)
+        i = 0
+        while i < len(plaintext):
+            #while encrypting plaintext block by block =========================
+            #block = bytes(' '.encode())
+
+            # Read only BLOCK_SIZE number of bytes of input file
+            block = bytes(plaintext[i:i + BLOCK_SIZE].encode)
+
+            # Break if there is no more read bytes
+            if(len(block) == 0):
+                break
+
+            i = i + BLOCK_SIZE
+
+            # Pad the byte if it is less than BLOCK_SIZE number of chars
+            append = (BLOCK_SIZE - len(block)) * '-'
+            block = block + bytes(append.encode())
+
+            # Encrypt the byte block
+            #ciphertext = cipher.encrypt(block)
+            ciphertextblock = cipher.encrypt(block, 1000)
+            print("block     : ", block)
+            print("ciphertext: ", ciphertextblock)
+
+            # Write to the ciphertext
+            ciphertext = ciphertext + ciphertextblock
+            #done encrypting plaintext block by block ==========================
+
         ciphertext = cipher.encrypt(plaintext.encode())
         print("Ciphertext: ", ciphertext)
 
         return ciphertext
+    #encrypt ###################################################################
 
     """
-        Encrypts a symmetric key using a public key
+        Encrypts a symmetric key block by block using a public key
     """
     def encKey(self, plainKey):
         #call the rsa functions for encryption
@@ -150,9 +190,10 @@ class myRSA(object):
 
         return cipherKey
         pass
+    #encKey ####################################################################
 
     """
-        Decrypts a symmetric key using a private key
+        Decrypts a symmetric key block by block using a private key
     """
     def decKey(self, cipherKey):
         #call the rsa functions for decryption
@@ -162,11 +203,12 @@ class myRSA(object):
 
         #call the rsa functions for decryption
         cipher = PKCS1_v1_5.new(self.privKey)
-        plainKey = cipher.decrypt(cipherKey, 900)
+        plainKey = cipher.decrypt(cipherKey, 1000)
         print("Decrypted key: ", plainKey)
 
         return plainKey
         pass
+    #decKey ####################################################################
 
     """
         Decrypts a string of ciphertext
@@ -177,10 +219,37 @@ class myRSA(object):
         plaintext = ''
 
         #call the rsa functions for decryption
-        # Decrypt using the private key
-        cipher = PKCS1_v1_5.new(self.privKey)
-        plaintext = cipher.decrypt(ciphertext, 900)
+        # Decrypt using the symmetric key
+        cipher = PKCS1_v1_5.new(self.key)
+        j = 0
+        while j < len(ciphertext):
+            #while decrypting ciphertext block by block ========================
+            #block = bytes(' '.encode())
+            # Read only BLOCK_SIZE number of bytes of input file
+            block = bytes(ciphertext[j:j + BLOCK_SIZE].encode())
+
+            # Break if there is no more read bytes
+            if(len(block) == 0):
+                break
+
+            j = j + BLOCK_SIZE
+
+            # Pad the byte if it is less than BLOCK_SIZE number of chars
+            append = (BLOCK_SIZE - len(block)) * '-'
+            block = block + bytes(append.encode())
+
+            # Encrypt the byte block
+            #plaintext = cipher.decrypt(block)
+            plaintextblock = cipher.decrypt(block, 1000)
+
+            print("block    : ", block)
+            print("plaintext: ", plaintextblock)
+
+            # Write to the ciphertext
+            plaintext = plaintext + plaintextblock
+            #done decrypting ciphertext block by block =========================
         print("Decrypted: ", plaintext)
 
         return plaintext
         pass
+    #decrypt ###################################################################

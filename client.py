@@ -2,40 +2,34 @@ from socket import AF_INET, socket, SOCK_STREAM
 from threading import Thread
 from myrsaV2 import myRSA
 
+symmKey = ''
+plainKey = ''
+
 def receive():
     """Handles receiving of messages."""
     while True:
         try:
-            msg = client_socket.recv(BUFSIZ).decode("utf8")
-            """
-            #determine whether the message is a key or an actual message
-            if msg != None:#TODO add the condition that checks for it being a key
-                #it is a symmetric key
-                #decrypt the key
-                decodedKey = rsa.decKey(msg)
-                #save the key to the myrsaV2class instance
-                rsa.setKey(decodedKey)
-                pass
-            else:
-                #it is a normal message
-                #decrypt the message
-                decodedText = rsa.decrypt(msg)
-                msg = decodedText
-                pass
-            """
+            msg = client_socket.recv(BUFSIZ)
+            #print(msg.decode())
+            ciphertext = msg.decode()
+            msg = rsa.decrypt(ciphertext)
             print(msg)
-        except OSError:  # Possibly client has left the chat.
-            break
+        except UnicodeDecodeError:  # Then we know its a symmetric key
+            symmKey = msg
+            rsa.setKey(msg)
+            print(msg)
+            plainKey = rsa.decKey(symmKey)
+            print(plainKey)
 
 def send(msg):  # event is passed by binders.
     """Handles sending of messages."""
-    #encrypt the message
-    #ciphertext = rsa.encrypt(msg)
     if msg == "{quit}":
-        client_socket.send(bytes(msg, "utf8"))
+        # Client wants to quit
+        client_socket.send(msg)
         client_socket.close()
     else:
-        client_socket.send(bytes(msg, "utf8"))
+        # Encrypt the message
+        client_socket.send(msg)
 
 def on_closing(event=None):
     """This function is to be called when the window is closed."""
@@ -64,7 +58,7 @@ password = input("Enter password: ")
 
 # Create the public and private key of the client
 rsa = myRSA(username)
-# Public key filename will be 'username-pu.pem' 
+# Public key filename will be 'username-pu.pem'
 # Private key filename will be 'username-pr.pem'
 rsa.storeKeyPair()
 # Now let's load those keys
@@ -76,9 +70,11 @@ enable_dsa = ''
 while(not("yes" in enable_dsa or "no" in enable_dsa)):
     enable_dsa = input("Enable DSA (yes or no): ")
 
-send("{},{}".format(username,password))
-send("{}".format(enable_dsa.lower()))
-#send("public key")
+send("{},{}".format(username,password).encode())
+send("{}".format(enable_dsa.lower()).encode())
 
 while True:
-    send(input())
+    msg = input()
+    msg = rsa.encrypt(msg)
+    send(msg)
+    #send(input())
