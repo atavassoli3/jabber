@@ -22,9 +22,9 @@ class myRSA(object):
     # default constructor
     def __init__(self, user):
         self.userName = user
-        self.key = None   #the symmetric key
-        self.pubKey = None
-        self.privKey = None
+        self.key = ''   #the symmetric key
+        self.pubKey = ''
+        self.privKey = ''
         self.keypair = (self.pubKey, self.privKey)
         # The maximum key size
         self.KEY_SIZE = 512
