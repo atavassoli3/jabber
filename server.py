@@ -1,198 +1,215 @@
-#!/usr/bin/env python3
-"""Server for multithreaded (asynchronous) chat application."""
-from socket import AF_INET, socket, SOCK_STREAM
-from threading import Thread
-#to generate a symmetric key
+import socket
+import threading
 import os
-
-#added may 22 354pm
-from myrsaV2 import myRSA
+from Crypto.PublicKey import RSA
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Util.Padding import unpad
 from Crypto.PublicKey import RSA
 from Crypto.Cipher import PKCS1_v1_5
-from Crypto.Cipher import PKCS1_OAEP
-#from Crypto.Signature.pkcs1_15 import PKCS115_SigScheme
-#from Crypto.Hash import SHA256
-import binascii
-import Crypto.Signature.pkcs1_15
-#end of added may 22 354pm block
 
-help_prompt = "\nClient Commands:\n" + \
-"\n{who} - The server will send back the client if \nthey exist and whether they are online\n" + \
-"\n{invite} [parameter] - parameter can be a list of \nusernames separated by a space. The server will \nsend symmetric keys to all of the following users \nwho are online as well as notify who was offline.\n" + \
-"\n{quit} - closes the connection with the server. \nThe server will then broadcast that the user \nhas went offline to all users in the chat \nwith the same symmetric key.\n"
+listenPort = 1234
 
-clients = []
-addresses = {}
-inviteList = []
-rsa = myRSA('server')
-symmKey = rsa.generateKey() # rsa.key is then set
-print(symmKey)
+# The socket the server uses for listening
+listenSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-class Client:
-	def __init__(self, sock, username, password):
-		self.sock = sock
-		self.username = username
-		self.password = password
-		self.pubKey = ''
-		self.priKey = ''
-		self.symKey = ''
-		self.dsa = False
-		self.rsa = False
-	"""
-		#the class members that are instances of mysignature and myrsaV2
-		self.serverRSA = myRSA()
+# Associate the listening socket with
+# port 1234
+listenSock.bind(('', 1234))
 
-	#sets the value of the private, public, or symmetric key in the self.serverRSA member instance of the myrsaV2 class
-	#call this class with the key to be stored and the mode of the key which is a string that will indicate which key is being stored
-	def setMyRSAKeys(self, keyVal, keyMode):
-		if keyMode == "SYM":
-			#symmetric key
-			self.serverRSA.key = keyVal
-			pass
-		elif keyMode == "PUB":
-			#public key
-			self.serverRSA.pubKey = keyVal
-			pass
-		elif keyMode == "PRI":
-			#private key
-			self.serverRSA.privKey = keyVal
-			pass
-		else:
-			print("ERRROR! INVALID ARGUMENT FOR PARAMETER keyMode.")
-			print("only use a string of 'SYM', 'PUB', or  'PRI', with uppercase letters only.")
-			print("Your submitted string was: ", keyMode)
-			pass
-		pass
-	"""
+# Start listening with a connection backlog queue
+# of 100
+listenSock.listen(100)
 
-def accept_incoming_connections():
-	"""Sets up handling for incoming clients."""
-	while True:
-		client, client_address = SERVER.accept()
-		print("%s:%s has connected." % client_address)
-		addresses[client] = client_address
-		Thread(target=handle_client, args=(client,)).start()
+# The user name to socket dictionary
+userNameToSockDic = {}
 
-def handle_client(client):  # Takes client socket as argument.
-	"""Handles a single client connection."""
-	# First interaction with client should be login
-	username, password = client.recv(BUFSIZ).decode("utf8").split(',')
+# A dictionary mapping user names to public keys
+keyDic = {}
 
-	clientObj = Client(client, username, password)
+# The server private key
+serverPrivateKey = None
 
-	# Login Operation
-	if(validate(username, password, clients)):
-		client.send("Login Successful".encode())
-	else:
-		client.send("Invalid Credentials".encode())
+##############################################
+# Encodes data only if it is not bytes
+# @param data - the data
+# @return encoded data if string, or the original
+# data if not a string
+#############################################
+def encodeif(data):
 
-	# Second interaction with client should be choosing to use DSA
-	enable_dsa = client.recv(BUFSIZ).decode("utf8")
+    # The data
+    retVal = data
 
-	if(enable_dsa == "yes"):
-		clientObj.dsa = True
-	else:
-		clientObj.dsa = False
+    if isinstance(data, str):
+        retVal = data.encode()
+
+    return retVal
+
+
+
+##########################################################
+# Loads the public keys from the pubKey directory and 
+# creates a dictionary mapping user names to public keys
+# The dictionary is a globally declared keyDic dictionary
+##########################################################
+def loadKeys():
+
+    # call listdir() method
+    # path is a directory of which you want to list
+    directories = os.listdir("./pubKeys")
+
+    # This would print all the files and directories
+    for file in directories:
 	
-	# Get the clients public key from the pem file they generated
-	with open (username+"-pu.pem", "rb") as pub_file:
-		contents = pub_file.read()
-		clientObj.pubKey = RSA.importKey(contents)
+	    # Check if this is a key file
+    	if(file.endswith("pem")):
 	
-	clients.append(clientObj)	
-
-	# Create a symmetric key 
-	cipher = PKCS1_v1_5.new(clientObj.pubKey)
-	cipherKey = cipher.encrypt(rsa.key)
-	print(cipherKey)
-	client.send(cipherKey)
-
-	# Welcome the user
-	welcome = 'Welcome to Jabber %s! Type {help} to learn about the commands.\n' % username
-	client.send(bytes(welcome, "utf8"))
 	
-	# Broadcast to other users in main chat that user is online
-	msg = "%s has joined the chat!" % username
-	broadcast(bytes(msg, "utf8"))
+
+	    	# Load the public key
+	    	with open ("./pubKeys/" + file, "rb") as pub_file:
 	
-	# Handles all the messages from the client after logging in / choosing rsa or dsa
-	while True:
-		global inviteList
-		msg = client.recv(BUFSIZ)
-		#decrypt the message
-		msg = rsa.decrypt(msg)
+	    		contents = pub_file.read()
+	    		puKey = RSA.importKey(contents)
+		
+	    		# Get the user name from the file name
+	    		userName = file.split("-")[0]
 
-		print(msg)
-		if(bytes("{who}", "utf8") in msg):
-			client.send(bytes(getClientsOnline(clients), "utf8"))
-
-		elif(bytes("{invite}", "utf8") in msg):
-			inviteList = msg.decode().split(" ")
-			inviteList[0] = username # Removes {invite} from the inviteList
-			strInviteList = ','.join(inviteList)
-			msg = "Now talking in chatroom with: {}".format(strInviteList)
-			broadcastToSelectClients(bytes(msg,"utf8"), inviteList, clients)
-
-		elif(bytes("{help}", "utf8") in msg):
-			client.send(bytes(help_prompt, "utf8"))
-
-			#encrypt the message
-			#ciphertext = client.serverRSA.encrypt(msg)
-			#msg = ciphertext
-		elif(bytes("{quit}", "utf8") in msg):
-			client.close()
-			for c in clients:
-				if(c.sock == client):
-					clients.remove(c)
-			broadcast(bytes("%s has left the chat." % username, "utf8"))
-		else:
-			if(username in inviteList):
-				broadcastToSelectClients(bytes(username+": " + msg.decode("utf8"), "utf8"), inviteList, clients)
-			else:
-				broadcast(msg, username+": ")
-
-def broadcastToSelectClients(msg, inviteList, clients):
-	for invite in inviteList:
-		for client in clients:
-			if(invite == client.username):
-				client.sock.send(msg)
-
-def getClientsOnline(clients):
-	clientStr = "Online Users: "
-	for client in clients:
-		clientStr += client.username + ", "
-	return clientStr[:-2]
-
-def validate(username, password, clients):
-	for client in clients:
-		if(client.username == username and client.password != password):
-			return False
-	return True
-
-def get_client(username, clients):
-	for client in clients:
-		if(client.username == username):
-			return client
-	return False
-
-def broadcast(msg, prefix=""):  # prefix is for name identification.
-	"""Broadcasts a message to all the clients."""
-	for client in clients:
-		client.sock.send(bytes(prefix, "utf8")+msg)
+	    		# Save the user-name to key mapping in the dictionary
+	    		keyDic[userName] = puKey	
 
 
-HOST = "127.0.0.1"
-PORT = 8000
-BUFSIZ = 1024
-ADDR = (HOST, PORT)
 
-SERVER = socket(AF_INET, SOCK_STREAM)
-SERVER.bind(ADDR)
+################################################
+# Puts the message into the formatted form
+# and sends it over the socket
+# @param sock - the socket to send the message
+# @param msg - the message
+################################################
+def sendMsg(sock, msg):
 
-if __name__ == "__main__":
-	SERVER.listen(5)
-	print("Waiting for connection...")
-	ACCEPT_THREAD = Thread(target=accept_incoming_connections)
-	ACCEPT_THREAD.start()
-	ACCEPT_THREAD.join()
-	SERVER.close()
+	# Get the message length
+	msgLen = str(len(msg))
+	
+	# Keep prepending 0's until we get a header of 3	
+	while len(msgLen) < 3:
+		msgLen = "0" + msgLen
+	
+	# Encode the message into bytes
+	msgLen = msgLen.encode()
+	
+	# Put together a message
+	sMsg = msgLen + encodeif(msg)
+	
+	# Send the message
+	sock.sendall(sMsg)
+
+
+
+###########################################################
+# The function to handle the message of the specified format
+# @param sock - the socket to receive the message from
+# @returns the message without the header
+############################################################
+def recvMsg(sock):
+	
+	# The size
+	size = sock.recv(3)
+	
+	# Convert the size to the integer
+	intSize = int(size)
+
+	# Receive the data
+	data = sock.recv(intSize)
+
+	return data
+
+
+############################################################
+# Will be called by the thread that handles a single client
+# @param clisock - the client socket
+# @param userName - the user name to serve
+#############################################################
+
+def serviceTheClient(cliSock, userName):
+        
+    # Get the client's public key
+    cliPubKey = keyDic[str(userName.decode())]
+        
+    print("The key of user ", userName, " is ", cliPubKey)
+    
+    cipher = PKCS1_v1_5.new(serverPrivateKey)
+    
+
+    # Keep servicing the client until it disconnects
+    while cliSock:
+	
+        # Receive the data from the client
+        cliData = recvMsg(cliSock)
+        
+        msg = cipher.decrypt(cliData, 1000)
+                
+        print("Got data ", msg, " from client socket ", cliSock)
+	
+        randomAESKey = os.urandom(128)[:16]
+        
+        print(randomAESKey)
+        
+
+        cliPubKeyCipher = PKCS1_v1_5.new(cliPubKey)
+        encryptedSymKey = cliPubKeyCipher.encrypt(randomAESKey)
+        
+        print("encrypted sym")
+        print(encryptedSymKey)
+
+	# Send the capitalized string to the client
+        sendMsg(cliSock, encryptedSymKey)
+        
+        msg = recvMsg(cliSock)
+
+        aesCipher = AES.new(randomAESKey, AES.MODE_ECB)
+        
+        plaintext = aesCipher.decrypt(msg)
+
+        print(plaintext)
+
+		# Hang up the client
+		#cliSock.close()
+	
+# Load the public keys
+loadKeys()
+
+with open ("server-private.pem", "rb") as priv_file:
+    contents = priv_file.read()
+    serverPrivateKey = RSA.importKey(contents)
+
+print(keyDic)
+
+# Server loop
+while True:
+	
+	# Accept the connection
+	clienComSock, cliInfo = listenSock.accept()
+
+	print("New client connected: ", cliInfo)
+	
+	# Get the user name
+	userName = recvMsg(clienComSock)	
+	
+	print("Got user name", userName)
+	
+	# The user name to socket	
+	userNameToSockDic[userName] = clienComSock
+	
+	# Create a new thread
+	cliThread = threading.Thread(target=serviceTheClient, args=(clienComSock,userName,))
+	
+	# Start the thread
+	cliThread.start()
+
+	
+
+
+
+
