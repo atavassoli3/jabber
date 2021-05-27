@@ -12,8 +12,8 @@ Darcy Hughes (darcyh@csu.fullerton.edu)
 ----------------------
 Contributions:
 
-Brandon Ryan    
-Carla Jacobsen - created the myRSA class (another member helped with editing it), wrote a little bit of myRSA code for server.py and client.py
+Brandon Ryan   - worked on the server.py and client.py
+Carla Jacobsen - created the myRSA class (another member helped with editing it),
                  wrote the abstract and security protocols and myRSA implementation for the project report,
                  added the ability to read the commands in a message ({help}, {invite}, {quit}),
                  added inviteClient() and sendMsgToPrivateOnly() function
