@@ -15,6 +15,8 @@ Contributions:
 Brandon Ryan    
 Carla Jacobsen - created the myRSA class (another member helped with editing it), wrote a little bit of myRSA code for server.py and client.py
                  wrote the abstract and security protocols and myRSA implementation for the project report,
+                 added the ability to read the commands in a message ({help}, {invite}, {quit}),
+                 added inviteClient() and sendMsgToPrivateOnly() function
                  did some testing
 Zach Sarvas - Tested python code and helped write support documentation
 Aidin Tavassoli 
