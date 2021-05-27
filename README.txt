@@ -12,12 +12,12 @@ Darcy Hughes (darcyh@csu.fullerton.edu)
 ----------------------
 Contributions:
 
-Brandon Ryan    
+Brandon Ryan    - worked on the server.py and the client.py
 Carla Jacobsen - created the myRSA class (another member helped with editing it), wrote a little bit of myRSA code for server.py and client.py
                  wrote the abstract and security protocols and myRSA implementation for the project report,
                  did some testing
 Zach Sarvas - Tested python code and helped write support documentation
-Aidin Tavassoli 
+Aidin Tavassoli - worked on the dsa.py and the mysignature.py
 Darcy Hughes - fixed errors and tested code. Wrote the design and conclusion for the documentation
 
 ----------------------
