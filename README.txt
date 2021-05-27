@@ -23,5 +23,10 @@ Darcy Hughes - fixed errors and tested code. Wrote the design and conclusion for
 ----------------------
 How to run the project code:
 
+In the terminal, type the following command to instantiate the server: python3 server.py 
+
+Then, type the following command to launch the client: python3 client.py
+
+Proceed to follow the on-screen instructions.
 
 
