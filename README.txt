@@ -17,7 +17,7 @@ Carla Jacobsen - worked on the myRSA class (another member helped with editing i
                  worked on the abstract and security protocols and myRSA implementation for the project report,
                  worked on the  inviteClient() and sendMsgToPrivateOnly() function
 Zach Sarvas - Tested python code and helped write support documentation
-Aidin Tavassoli 
+Aidin Tavassoli - worked on dsa and mysignature.py
 Darcy Hughes - fixed errors and tested code. Wrote the design and conclusion for the documentation
 
 ----------------------
