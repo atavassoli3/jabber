@@ -36,6 +36,12 @@ invitedPubKeysDic = {}
 # The server private key
 serverPrivateKey = ''
 
+#the rsa instancfe for the server
+#so we can have our own public key built thru the myrsa functions
+serverRSA = myRSA("server")
+symmKey = serverRSA.generateKey()
+print("symmKey = ", symmKey)
+
 clients = []
 addresses = {}
 inviteList = []
