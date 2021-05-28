@@ -30,6 +30,16 @@ keyDic = {}
 # The server private key
 serverPrivateKey = None
 
+#dictionary mapping invited users to their public keys
+invitedPubKeysDic = {}
+
+# The server private key
+serverPrivateKey = ''
+
+clients = []
+addresses = {}
+inviteList = []
+
 ##############################################
 # Encodes data only if it is not bytes
 # @param data - the data
@@ -85,6 +95,40 @@ def loadKeys():
 				keyDic[userName] = puKey	
 
 
+############################################################
+# Will be called by the thread that handles a single client
+# someone being invited to the private chat
+#
+# @param inviterSock - the client socket the inviter inviting the person who is inviteeName
+# @param inviteeName - the invitee being invited
+#############################################################
+def inviteClient(inviterSock, inviteeName):
+    #get the key of userName
+    inviteePubKey = keyDic[inviteeName]
+    #add the public key to the invitedPubKeysDic
+    invitedPubKeysDic[inviteeName] = inviteePubKey
+    #add the invitee to the inviteList
+    #source: https://www.w3schools.com/python/python_lists_add.asp
+    inviteList.append(inviteeName)
+
+    #TODO GET THE USERNAME OF inviterSock
+    #inviterName = userNameToSockDic[inviterSock]
+    invertedSockDic = userNameToSockDic.keys()
+    for index in invertedSockDic:
+        if userNameToSockDic[index] == inviterSock:
+            inviterName = index
+            break
+            pass
+        pass
+    #TODO GET THE PUBLIC KEY OF inviterName
+    inviterPubKey = keyDic[inviterName]
+    #TODO ADD THE PUBLIC KEY TO THE invitedPubKeysDic
+    invitedPubKeysDic[inviterName] = inviterPubKey
+    #add inviterName to the inviteList
+    inviteList.append(inviterName)
+
+    #TODO idk what goes here maybe sometihng happens here
+    pass
 
 ################################################
 # Puts the message into the formatted form
