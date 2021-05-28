@@ -24,6 +24,15 @@ cliPublicKey = None
 # Server pubic key
 serverPublicKey = None
 
+help_prompt = "\nClient Commands:\n" + \
+"\n{who} - The server will send back the client if \nthey exist and whether they are online\n" + \
+"\n{invite} [parameter] - parameter can be a list of \nusernames separated by a space. The server will \nsend symmetric keys to all of the following users \nwho are online as well as notify who was offline.\n" + \
+"\n{quit} - closes the connection with the server. \nThe server will then broadcast that the user \nhas went offline to all users in the chat \nwith the same symmetric key.\n"
+
+quit = "{quit}"
+helpVar = "{help}"
+invite = "{invite}"
+
 ##############################################
 # Encodes data only if it is not bytes
 # @param data - the data
@@ -88,18 +97,38 @@ def sendMsg(sock, msg):
 # data to the server
 ###########################################
 def waitForInput(cliSock):
-	
-	while True:
 
-		data = input("Enter something: ")
-		#if("{invite}" in data):
-	#		encryptedData = cipher.encrypt(data.encode())	
-	#		sendMsg(cliSock, encryptedData)
-		#cipherText = aesCipher.encrypt(pad(data.encode(), 16))
-		#sendMsg(cliSock, data)
-		encryptedData = cipher.encrypt(data.encode())	
-		sendMsg(cliSock, encryptedData)
-		print("\nSending === ",encryptedData)
+    while True:
+
+        data = input("Enter something: ")
+
+        #see if there is a command
+        if data == quit:
+            #the user wants to quit
+            # Client wants to quit
+            client_socket.send(msg)
+            client_socket.close()
+            pass#if data == {quit}
+        elif data == helpVar:
+            print(help_prompt)
+            pass #if data == {help}
+        #source: https://stackoverflow.com/questions/663171/how-do-i-get-a-substring-of-a-string-in-python
+        elif data[:len(invite)] == invite:
+            #https://www.w3schools.com/python/ref_string_split.asp
+            #split it into {invite} and the name of the person to invite
+            inviteStr = data.split("{invite} ", 1)
+            #TODO: tell the server that this client is invited
+	    #inviteClient(cliSock, inviteStr[1])
+            pass #if data == {invite}
+        else:
+            #its a normal message encrypt it and send it
+            encryptedData = cipher.encrypt(data.encode())
+            sendMsg(cliSock, encryptedData)
+            pass#else a normal message
+
+        #old location of this code
+        #encryptedData = cipher.encrypt(data.encode())
+        #sendMsg(cliSock, encryptedData)
 
 
 #########################################
