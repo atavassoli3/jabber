@@ -118,7 +118,7 @@ def waitForInput(cliSock):
             #split it into {invite} and the name of the person to invite
             inviteStr = data.split("{invite} ", 1)
             #TODO: tell the server that this client is invited
-	    #inviteClient(cliSock, inviteStr[1])
+	    inviteClient(cliSock, inviteStr[1])
             pass #if data == {invite}
         else:
             #its a normal message encrypt it and send it
