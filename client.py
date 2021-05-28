@@ -1,190 +1,101 @@
-from Crypto.PublicKey import RSA
+from socket import AF_INET, socket, SOCK_STREAM
+from threading import Thread
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
-from Crypto.Util.Padding import unpad
-import socket
-from Crypto.PublicKey import RSA
-from Crypto.Cipher import PKCS1_v1_5
-import threading
+from myrsaV2 import myRSA
 
-# The server port and IP
-serverIP = "127.0.0.1"
-serverPort = 1234
+# Signature functions
+import RSAsignature
+import DSAsignature
 
-# Create a TCP socket that uses IPv4 address
-cliSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Connect to the server
-cliSock.connect((serverIP, serverPort))
-
-# The client private and public keys
-cliPrivateKey = None
-cliPublicKey = None
-
-# Server pubic key
-serverPublicKey = None
-
-##############################################
-# Encodes data only if it is not bytes
-# @param data - the data
-# @return encoded data if string, or the original
-# data if not a string
-#############################################
-def encodeif(data):
-
-    # The data
-    retVal = data
-
-    if isinstance(data, str):
-        retVal = data.encode()
-
-    return retVal
+cipherKey = ''  # server encrypted symmetric key with clients pub key
+plainKey = ''  # symm key
 
 
-
-###########################################################
-# The function to handle the message of the specified format
-# @param sock - the socket to receive the message from
-# @returns the message without the header
-############################################################
-def recvMsg(sock):
-	
-	# The size
-	size = sock.recv(3)
-	
-	# Convert the size to the integer
-	intSize = int(size)
-
-	# Receive the data
-	data = sock.recv(intSize)
-
-	return data
-
-################################################
-# Puts the message into the formatted form
-# and sends it over the socket
-# @param sock - the socket to send the message
-# @param msg - the message
-################################################
-def sendMsg(sock, msg):
-
-	# Get the message length
-	msgLen = str(len(msg))
-	
-	# Keep prepending 0's until we get a header of 3	
-	while len(msgLen) < 3:
-		msgLen = "0" + msgLen
-    
-        
-	# Encode the message into bytes
-	msgLen = msgLen.encode()
-    
-        
-        
-	# Put together a message
-	sMsg = msgLen + encodeif(msg)
-	
-	# Send the message
-	sock.sendall(sMsg)
-
-
-
-
-###########################################
-# A thread function that waits for the user input
-# @param cliSock - the socket for sending
-# data to the server
-###########################################
-def waitForInput(cliSock):
-
+def receive():
+    """Handles receiving of messages."""
     while True:
-
-        data = input("Enter something: ")
-        
-        encryptedData = cipher.encrypt(data.encode())
-            
-        sendMsg(cliSock, encryptedData)
-
-
-
-#########################################
-# Waits for messages from the server and
-# prints them
-# @param cliSock - the socket to wait for
-# the messages
-#########################################
-def waitForServerMsgs(cliSock):
+        try:
+            msg = client_socket.recv(BUFSIZ)
+            # print(msg.decode())
+            print(msg)
+        except UnicodeDecodeError:  # Then we know its a cipher key if it has non utf8 chars
+            cipherKey = msg
+            plainKey = rsa.decKey(cipherKey)
+            rsa.setKey(plainKey)
+            print(plainKey)
 
 
-    while True:
-
-        msg = recvMsg(cliSock)
-	
-        print("From server: ", msg)
-		
-	# Send a message to the server
-#	cliSock.sendall(msg.encode())
-
-	# Receive at most 1000 bytes from the server
-#	recvData = cliSock.recv(1000)
-
-#	print(recvData)	# Create a new thread
+def send(msg):
+    """Handles sending of messages."""
+    if msg == "{quit}":
+        # Client wants to quit
+        client_socket.send(msg)
+        client_socket.close()
+    else:
+        # Encrypt the message
+        client_socket.send(RSAsignature.encodeif(msg))
 
 
-# Send a message to the server
-msg = input("Enter the user name: ")
-
-sendMsg(cliSock, msg)
-
-print(type(msg))
-
-# Load the public key
-with open ("server-public.pem", "rb") as server_pub_file:
-    contents = server_pub_file.read()
-    serverPublicKey = RSA.importKey(contents)
+def on_closing(event=None):
+    """This function is to be called when the window is closed."""
+    send("{quit}")
 
 
+# Using Localhost as default IP and port 8000
+HOST = "127.0.0.1"
+PORT = "8000"
+if not PORT:
+    PORT = 33000
+else:
+    PORT = int(PORT)
 
-# Load the public key
-with open (msg + "-public.pem", "rb") as pub_file:
-    contents = pub_file.read()
-    cliPublicKey = RSA.importKey(contents)
+BUFSIZ = 1024
+ADDR = (HOST, PORT)
 
-# Load the public key
-with open (msg + "-private.pem", "rb") as priv_file:
-    contents = priv_file.read()
-    cliPrivateKey = RSA.importKey(contents)
+client_socket = socket(AF_INET, SOCK_STREAM)
+client_socket.connect(ADDR)
 
-# Send the message
-#sendMsg(cliSock, msg)
+receive_thread = Thread(target=receive)
+receive_thread.start()
 
-chatWithMsg = "alice darth"
+# Send credentials to server for verification
+username = input("Enter username: ")
+password = input("Enter password: ")
 
-# Create a cipher based on the key
-cipher = PKCS1_v1_5.new(serverPublicKey)
+# Create the public and private key of the client
+rsa = myRSA(username)
+# Public key filename will be 'username-pu.pem'
+# Private key filename will be 'username-pr.pem'
+rsa.storeKeyPair()
+# Now let's load those keys
+# this gives us our public and private key
+rsa.loadKeyPair()
 
-encryptedMsg = cipher.encrypt(chatWithMsg.encode())
+enable_dsa = ''
+# Send RSA or DSA choice of encryption to server
+while(not("yes" in enable_dsa or "no" in enable_dsa)):
+    enable_dsa = input("Enable DSA (yes or no): ")
+if(enable_dsa == "yes"):
+    useDSA = True
+    dsa_key = DSAsignature.DSA_keyGen(username)
 
-sendMsg(cliSock, encryptedMsg)
+send("{},{}".format(username, password).encode())
+send("{}".format(enable_dsa.lower()).encode())
 
-encSymKey = recvMsg(cliSock)
+while True:
+    msg = input()
+    msg = DSAsignature.encodeif(msg)
+    if(useDSA):
+        signature = DSAsignature.DSA_sign(msg, dsa_key)
 
-decryptCipher = PKCS1_v1_5.new(cliPrivateKey)
-decyptedSym = decryptCipher.decrypt(encSymKey, 1000)
-
-print("Decrypted sym: ")
-print(decyptedSym)
-
-aesCipher = AES.new(decyptedSym, AES.MODE_ECB)
-
-cipherText = aesCipher.encrypt(pad("secret".encode(), 16))
-
-sendMsg(cliSock, cipherText)
-
-
-sendThread = threading.Thread(target=waitForInput, args=(cliSock,))
-recvThread = threading.Thread(target=waitForServerMsgs, args=(cliSock,))
-	
-# Start the thread
-#sendThread.start()
-#recvThread.start()
+    else:
+        rsa.loadKeyPair()
+        # print(type(rsa.keypair))
+        signature = RSAsignature.signPlaintext(msg, rsa.privKey)
+    print("Key: {}".format(rsa.key))
+    msg = rsa.encrypt(msg)
+    print(msg)
+    send(msg)
+    signature = rsa.encrypt(signature)
+    send(signature)
+    # send(input().encode())
