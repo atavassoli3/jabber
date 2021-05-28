@@ -17,7 +17,7 @@ Carla Jacobsen - created the myRSA class (another member helped with editing it)
                  wrote the abstract and security protocols and myRSA implementation for the project report,
                  did some testing
 Zach Sarvas - Tested python code and helped write support documentation
-Aidin Tavassoli - worked on the dsa.py and the mysignature.py
+Aidin Tavassoli - worked on the DSAsignature.py and the RSAsignature.py
 Darcy Hughes - fixed errors and tested code. Wrote the design and conclusion for the documentation
 
 ----------------------
@@ -26,6 +26,8 @@ How to run the project code:
 In the terminal, type the following command to instantiate the server: python3 server.py 
 
 Then, type the following command to launch the client: python3 client.py
+
+Sign in/up with new username and password
 
 Proceed to follow the on-screen instructions.
 
