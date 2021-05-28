@@ -102,33 +102,34 @@ def loadKeys():
 # @param inviterSock - the client socket the inviter inviting the person who is inviteeName
 # @param inviteeName - the invitee being invited
 #############################################################
-def inviteClient(inviterSock, inviteeName):
+#not working
+#def inviteClient(inviterSock, inviteeName):
     #get the key of userName
-    inviteePubKey = keyDic[inviteeName]
+    #inviteePubKey = keyDic[inviteeName]
     #add the public key to the invitedPubKeysDic
-    invitedPubKeysDic[inviteeName] = inviteePubKey
+    #invitedPubKeysDic[inviteeName] = inviteePubKey
     #add the invitee to the inviteList
     #source: https://www.w3schools.com/python/python_lists_add.asp
-    inviteList.append(inviteeName)
+    #inviteList.append(inviteeName)
 
     #TODO GET THE USERNAME OF inviterSock
     #inviterName = userNameToSockDic[inviterSock]
-    invertedSockDic = userNameToSockDic.keys()
-    for index in invertedSockDic:
-        if userNameToSockDic[index] == inviterSock:
-            inviterName = index
-            break
-            pass
-        pass
+    #invertedSockDic = userNameToSockDic.keys()
+    #for index in invertedSockDic:
+        #if userNameToSockDic[index] == inviterSock:
+        #    inviterName = index
+       #     break
+      #      pass
+     #   pass
     #TODO GET THE PUBLIC KEY OF inviterName
-    inviterPubKey = keyDic[inviterName]
+    #inviterPubKey = keyDic[inviterName]
     #TODO ADD THE PUBLIC KEY TO THE invitedPubKeysDic
-    invitedPubKeysDic[inviterName] = inviterPubKey
+    #invitedPubKeysDic[inviterName] = inviterPubKey
     #add inviterName to the inviteList
-    inviteList.append(inviterName)
+    #inviteList.append(inviterName)
 
     #TODO idk what goes here maybe sometihng happens here
-    pass
+    #pass
 
 ################################################
 # Puts the message into the formatted form
