@@ -42,6 +42,14 @@ serverRSA = myRSA("server")
 symmKey = serverRSA.generateKey()
 print("symmKey = ", symmKey)
 
+#initialize the public and private keys for the server
+serverRSA.storeKeyPair()
+serverRSA.loadKeyPair()
+serverPrivateKey = serverRSA.privKey
+serverPublicKey = serverRSA.pubKey
+print("serverPrivateKey = ", serverPrivateKey)
+print("serverPublicKey = ", serverPublicKey)
+
 clients = []
 addresses = {}
 inviteList = []
