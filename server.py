@@ -12,10 +12,7 @@ from Crypto.Cipher import PKCS1_v1_5
 #from Crypto.Hash import SHA256
 import binascii
 import Crypto.Signature.pkcs1_15
-
-# signature functions:
-import RSAsignature
-import DSAsignature
+import SendRecieve
 
 help_prompt = "\nClient Commands:\n" + \
     "\n{who} - The server will send back the client if \nthey exist and whether they are online\n" + \
@@ -54,18 +51,18 @@ def accept_incoming_connections():
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
     # First interaction with client should be login
-    username, password = client.recv(BUFSIZ).decode("utf8").split(',')
+    username, password = client.recvMsg(BUFSIZ).decode("utf8").split(',')
 
     clientObj = Client(client, username, password)
 
     # Login Operation
     if(validate(username, password, clients)):
-        client.send("Login Successful".encode())
+        client.sendMsg("Login Successful".encode())
     else:
-        client.send("Invalid Credentials".encode())
+        client.sendMsg("Invalid Credentials".encode())
 
     # Second interaction with client should be choosing to use DSA or not
-    enable_dsa = client.recv(BUFSIZ).decode("utf8")
+    enable_dsa = client.recvMsg(BUFSIZ).decode("utf8")
 
     if(enable_dsa == "yes"):
         clientObj.dsa = True
@@ -82,12 +79,12 @@ def handle_client(client):  # Takes client socket as argument.
     # Encrypt the symmetric key with clients pub key
     cipher = PKCS1_v1_5.new(clientObj.pubKey)
     cipherKey = cipher.encrypt(rsa.key)
-    client.send(cipherKey)
+    client.sendMsg(cipherKey)
     print("Symmetric key after encrypting with clients public key: {}".format(cipherKey))
 
     # Welcome the user
     welcome = 'Welcome to Jabber %s! Type {help} to learn about the commands.\n' % username
-    client.send(bytes(welcome, "utf8"))
+    client.sendMsg(bytes(welcome, "utf8"))
 
     # Broadcast to other users in main chat that user is online
     msg = "%s has joined the chat!" % username
@@ -100,26 +97,15 @@ def handle_client(client):  # Takes client socket as argument.
 
         # Attempt to receive input, if none, client has disconnected
         try:
-            msg = client.recv(BUFSIZ)
+            msg = client.recvMsg(BUFSIZ)
             msg = rsa.decrypt(msg)
-            signature = client.recv(BUFSIZ)
-            signature = rsa.decrypt(signature)
             print(msg)
-
-            if clientObj.dsa == True:
-                DSAsignature.DSA_verifier(msg, signature, username)
-            else:
-                # msg = encodeif(msg)
-                RSAsignature.verifySignature(msg, clientObj.pubKey, signature)
-
         except OSError:
-
             print("{} has disconnected".format(addresses[client]))
             break
-        msg = RSAsignature.encodeif(msg)
 
         if(bytes("{who}", "utf8") in msg):
-            client.send(bytes(getClientsOnline(clients), "utf8"))
+            client.sendMsg(bytes(getClientsOnline(clients), "utf8"))
 
         elif(bytes("{invite}", "utf8") in msg):
             inviteList = msg.decode().split(" ")
@@ -131,7 +117,7 @@ def handle_client(client):  # Takes client socket as argument.
             broadcastToSelectClients(bytes(msg, "utf8"), inviteList, clients)
 
         elif(bytes("{help}", "utf8") in msg):
-            client.send(bytes(help_prompt, "utf8"))
+            client.sendMsg(bytes(help_prompt, "utf8"))
 
         elif(bytes("{quit}", "utf8") in msg):
             client.close()
@@ -152,7 +138,7 @@ def distributeSymmKeysToClients(inviteList, clients):
         for client in clients:
             if(invite == client.username):
                 key = encryptSymmKeyWithClientsPub(client.pubKey)
-                client.sock.send(key)
+                client.sock.sendMsg(key)
 
 
 def encryptSymmKeyWithClientsPub(pubKey):
@@ -166,7 +152,7 @@ def broadcastToSelectClients(msg, inviteList, clients):
     for invite in inviteList:
         for client in clients:
             if(invite == client.username):
-                client.sock.send(msg)
+                client.sock.sendMsg(msg)
 
 
 def getClientsOnline(clients):
@@ -193,7 +179,7 @@ def get_client(username, clients):
 def broadcast(msg, prefix=""):
     """Broadcasts a message to all the clients."""
     for client in clients:
-        client.sock.send(bytes(prefix, "utf8")+msg)
+        client.sock.sendMsg(bytes(prefix, "utf8")+msg)
 
 
 HOST = "127.0.0.1"
